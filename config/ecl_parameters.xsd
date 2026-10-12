@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Schema for config/ecl_parameters.xml. The batch validates the XML against it
+  (python/ecl/validate_xml.py) before PKG_PARAMS loads anything, so a typo
+  stops the run before a half-valid parameter set reaches the database.
+
+  The XSD checks structure and types. Rules that involve several values at
+  once (scenario weights summing to 1, every floor case present) are checked
+  in PL/SQL by PKG_PARAMS, because XSD 1.0 can't express them.
+-->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+
+  <!-- Shares of 1: scenario weights and floor rates. -->
+  <xs:simpleType name="unitDecimal">
+    <xs:restriction base="xs:decimal">
+      <xs:minInclusive value="0"/>
+      <xs:maxInclusive value="1"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <!-- Multipliers must be positive; 0 would wipe out the PD. -->
+  <xs:simpleType name="positiveDecimal">
+    <xs:restriction base="xs:decimal">
+      <xs:minExclusive value="0"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="scenarioCode">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="BASE"/>
+      <xs:enumeration value="DOWNSIDE"/>
+      <xs:enumeration value="SEVERE"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="stage">
+    <xs:restriction base="xs:integer">
+      <xs:enumeration value="1"/>
+      <xs:enumeration value="2"/>
+      <xs:enumeration value="3"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="yesNo">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="Y"/>
+      <xs:enumeration value="N"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="settingName">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="[A-Z][A-Z0-9_]*"/>
+      <xs:maxLength value="40"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:element name="eclParameters">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="settings">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="setting" maxOccurs="unbounded">
+                <xs:complexType>
+                  <xs:attribute name="name" type="settingName" use="required"/>
+                  <xs:attribute name="value" type="xs:decimal" use="required"/>
+                  <xs:attribute name="description" type="xs:string" use="required"/>
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+          <xs:unique name="uniqueSettingName">
+            <xs:selector xpath="setting"/>
+            <xs:field xpath="@name"/>
+          </xs:unique>
+        </xs:element>
+
+        <xs:element name="dpdMultipliers">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="band" maxOccurs="unbounded">
+                <xs:complexType>
+                  <xs:attribute name="fromDpd" type="xs:nonNegativeInteger" use="required"/>
+                  <xs:attribute name="toDpd" type="xs:nonNegativeInteger" use="required"/>
+                  <xs:attribute name="multiplier" type="positiveDecimal" use="required"/>
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+          <xs:unique name="uniqueBandStart">
+            <xs:selector xpath="band"/>
+            <xs:field xpath="@fromDpd"/>
+          </xs:unique>
+        </xs:element>
+
+        <xs:element name="scenarios">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="scenario" maxOccurs="3">
+                <xs:complexType>
+                  <xs:attribute name="code" type="scenarioCode" use="required"/>
+                  <xs:attribute name="weight" type="unitDecimal" use="required"/>
+                  <xs:attribute name="pdMultiplier" type="positiveDecimal" use="required"/>
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+          <xs:unique name="uniqueScenarioCode">
+            <xs:selector xpath="scenario"/>
+            <xs:field xpath="@code"/>
+          </xs:unique>
+        </xs:element>
+
+        <xs:element name="floors">
+          <xs:complexType>
+            <xs:sequence>
+              <!-- restructured applies to Stages 1 and 2, the monthsInStage3 band
+                   to Stage 3; PKG_PARAMS checks each row has the right ones. -->
+              <xs:element name="floor" maxOccurs="unbounded">
+                <xs:complexType>
+                  <xs:attribute name="stage" type="stage" use="required"/>
+                  <xs:attribute name="rate" type="unitDecimal" use="required"/>
+                  <xs:attribute name="restructured" type="yesNo" use="optional"/>
+                  <xs:attribute name="monthsInStage3From" type="xs:nonNegativeInteger" use="optional"/>
+                  <xs:attribute name="monthsInStage3To" type="xs:positiveInteger" use="optional"/>
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+            <xs:attribute name="source" type="xs:string" use="required"/>
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
+      <xs:attribute name="version" type="xs:string" use="required"/>
+      <xs:attribute name="segment" type="xs:string" use="required"/>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>

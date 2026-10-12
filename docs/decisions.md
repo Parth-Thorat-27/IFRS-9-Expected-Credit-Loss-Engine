@@ -107,3 +107,23 @@ With these in place, the Phase 11 check "floor_applied is Y exactly where the fl
 - `@@packages/x.pks` inside `install.sql` failed with SP2-0310. SQL*Plus resolves `@@file` against the calling script's folder, but `@@folder/file` against its own working directory. `run_sql` now starts SQL*Plus in the script's folder (`docker exec -w`), so both forms mean "relative to this script". Run without `WHENEVER OSERROR`, the same failure only printed SP2 warnings and the install "succeeded" with exit code 0. That is the blind spot `run_sql`'s output scan exists for.
 - A failing `$(...)` inside another command's arguments (`log "... $(sql_value ...)"`) does not stop a `set -e` script; only a failing assignment does. Scripts assign first and use the variable after, and `common.sh` sets `shopt -s inherit_errexit`.
 - `WHENEVER SQLERROR EXIT SQL.SQLCODE ROLLBACK` (with an explicit ROLLBACK) is used, so a failed script never commits half its work on the way out.
+
+## D-015 · Phase 6 · Built before Phases 4 and 5
+
+- **Spec:** the phases run in order 1 to 14.
+- **Done instead:** Phase 6 (XML parameters) was built straight after Phase 3. LGD calibration (Phase 4) needs `LGD_MIN_DEFAULTS`, and scoring the live book (Phase 5) needs `PD_FLOOR`. Both come from the XML config under the rule that nothing in the PL/SQL is hardcoded. The full run order is therefore: `setup_db.sh`, `load_params.sh`, `load_history.sh`, `train_pd_model.py`, `simulate_months.py`, `run_all_months.sh`.
+
+## D-016 · Phase 6 · Parameter-loading details
+
+- `PKG_PARAMS` has two entry points. `load_from_xml` reads the file through the `ECL_CONFIG_DIR` BFILE, as the spec says. `load_from_clob` takes the same XML as text, so tests can load deliberately broken copies without writing files into the read-only `config/` mount. Both call the same validation and MERGE code.
+- PL/SQL checks run before anything is written, so a bad file never leaves a half-loaded set:
+  - scenario weights sum to 1 (to 1e-9);
+  - every setting the engine reads is present;
+  - stage 1 and 2 floors carry `restructured` and stage 3 floors a months band;
+  - every floor case exists;
+  - DPD bands start at 0 and don't overlap.
+- The XSD marks `restructured` and `monthsInStage3From`/`To` as optional, because the spec's own XML uses them only on some `floor` rows. XSD 1.0 can't say "required when stage is 3", so that rule is one of the PL/SQL checks above.
+- A fourth audit trigger covers `PARAM_DPD_MULTIPLIER`. The spec names three tables, but the DPD multipliers are business parameters too.
+- Audit rows are written only for values that really change. A reload rewrites every row, so without that filter each load would log every parameter as "changed".
+- `scripts/load_params.sh` validates then loads, and is shared by the history load and the monthly batch.
+- Stage 3 floor bands are half-open: `monthsInStage3From` is inclusive and `monthsInStage3To` is exclusive. Months 0-11 get 40% and month 12 onwards gets 100%. The spec says "up to 1 year" and "over 1 year", which leaves the exact 12-month point open, so this convention is a choice.

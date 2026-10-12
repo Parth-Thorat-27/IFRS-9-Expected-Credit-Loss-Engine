@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<eclParameters version="1.0" segment="UNSECURED_RETAIL">
+  <settings>
+    <setting name="STAGE2_DPD" value="30" description="Stage 2 when DPD is above this"/>
+    <setting name="STAGE3_DPD" value="90" description="Stage 3 when DPD is above this"/>
+    <setting name="SICR_RELATIVE" value="2.0" description="Current PD at least this multiple of origination PD"/>
+    <setting name="SICR_ABSOLUTE" value="0.005" description="and at least this absolute PD increase"/>
+    <setting name="CURE_MONTHS" value="3" description="Months meeting Stage 1 tests before moving back"/>
+    <setting name="PD_FLOOR" value="0.0005" description="Minimum PD"/>
+    <setting name="PD_CAP" value="0.99" description="Maximum PD for Stages 1 and 2"/>
+    <setting name="LGD_MIN_DEFAULTS" value="500" description="Defaults needed for a grade-level LGD"/>
+    <setting name="DQ_MAX_REJECT_SHARE" value="0.01" description="Batch fails above this share of rejected rows"/>
+  </settings>
+  <dpdMultipliers>
+    <band fromDpd="0" toDpd="0" multiplier="1.0"/>
+    <band fromDpd="1" toDpd="30" multiplier="2.0"/>
+    <band fromDpd="31" toDpd="60" multiplier="3.5"/>
+    <band fromDpd="61" toDpd="90" multiplier="6.0"/>
+  </dpdMultipliers>
+  <scenarios>
+    <scenario code="BASE" weight="0.60" pdMultiplier="1.00"/>
+    <scenario code="DOWNSIDE" weight="0.30" pdMultiplier="1.30"/>
+    <scenario code="SEVERE" weight="0.10" pdMultiplier="1.80"/>
+  </scenarios>
+  <floors source="RBI final ECL directions, unsecured retail; verify against Annex N">
+    <floor stage="1" restructured="N" rate="0.0100"/>
+    <floor stage="2" restructured="N" rate="0.0500"/>
+    <floor stage="1" restructured="Y" rate="0.0500"/>
+    <floor stage="2" restructured="Y" rate="0.1000"/>
+    <floor stage="3" monthsInStage3From="0" monthsInStage3To="12" rate="0.4000"/>
+    <floor stage="3" monthsInStage3From="12" rate="1.0000"/>
+  </floors>
+</eclParameters>

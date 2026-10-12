@@ -5,20 +5,24 @@
 WHENEVER SQLERROR EXIT SQL.SQLCODE ROLLBACK
 SET ECHO OFF FEEDBACK OFF VERIFY OFF SERVEROUTPUT ON SIZE UNLIMITED
 
-PROMPT [1/8] tables
+PROMPT [1/9] tables
 @@01_tables.sql
-PROMPT [2/8] constraints and indexes
+PROMPT [2/9] constraints and indexes
 @@02_constraints_indexes.sql
-PROMPT [3/8] comments
+PROMPT [3/9] comments
 @@03_comments.sql
-PROMPT [4/8] external tables
+PROMPT [4/9] external tables
 @@04_external_tables.sql
-PROMPT [5/8] views
+PROMPT [5/9] views
 @@05_views.sql
-PROMPT [6/8] packages
+PROMPT [6/9] packages
 @@packages/pkg_batch_log.pks
 @@packages/pkg_batch_log.pkb
-PROMPT [7/8] seed data
+@@packages/pkg_params.pks
+@@packages/pkg_params.pkb
+PROMPT [7/9] triggers
+@@triggers/trg_param_audit.sql
+PROMPT [8/9] seed data
 @@seed/month_idx.sql
-PROMPT [8/8] compile check
+PROMPT [9/9] compile check
 @@check_install.sql
