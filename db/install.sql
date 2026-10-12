@@ -24,9 +24,12 @@ PROMPT [6/9] packages
 @@packages/pkg_load.pkb
 @@packages/pkg_lgd.pks
 @@packages/pkg_lgd.pkb
+@@packages/pkg_dq.pks
+@@packages/pkg_dq.pkb
 PROMPT [7/9] triggers
 @@triggers/trg_param_audit.sql
 PROMPT [8/9] seed data
 @@seed/month_idx.sql
+@@seed/dq_rules.sql
 PROMPT [9/9] compile check
 @@check_install.sql

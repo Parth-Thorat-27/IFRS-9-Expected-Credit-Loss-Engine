@@ -140,6 +140,7 @@ CREATE TABLE loan_snapshot (
   forbearance_flag  VARCHAR2(1)    NOT NULL,
   remaining_months  NUMBER(4)      NOT NULL,
   data_source       VARCHAR2(20)   NOT NULL,
+  source_row_num    NUMBER(10)     NOT NULL,
   run_id            NUMBER(12)     NOT NULL,
   loaded_ts         TIMESTAMP      DEFAULT SYSTIMESTAMP NOT NULL
 );

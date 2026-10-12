@@ -47,5 +47,25 @@ CREATE OR REPLACE PACKAGE BODY pkg_batch_log AS
     RETURN SUBSTR(DBMS_UTILITY.FORMAT_ERROR_STACK || DBMS_UTILITY.FORMAT_ERROR_BACKTRACE, 1, 4000);
   END error_text;
 
+  PROCEDURE require_step(p_reporting_date IN DATE, p_step_name IN VARCHAR2) IS
+    l_loaded  batch_run.started_ts%TYPE;
+    l_done    PLS_INTEGER;
+  BEGIN
+    SELECT MAX(started_ts) INTO l_loaded
+      FROM batch_run
+     WHERE reporting_date = p_reporting_date AND step_name = 'LOAD_SNAPSHOT' AND status = 'SUCCESS';
+
+    SELECT COUNT(*) INTO l_done
+      FROM batch_run
+     WHERE reporting_date = p_reporting_date AND step_name = UPPER(p_step_name)
+       AND status = 'SUCCESS' AND started_ts >= l_loaded;
+
+    IF l_loaded IS NULL OR l_done = 0 THEN
+      RAISE_APPLICATION_ERROR(-20005, 'step ' || UPPER(p_step_name) || ' has not succeeded for '
+        || TO_CHAR(p_reporting_date, 'YYYY-MM-DD') || ' since its snapshot was last loaded; '
+        || 'run the batch from that step');
+    END IF;
+  END require_step;
+
 END pkg_batch_log;
 /

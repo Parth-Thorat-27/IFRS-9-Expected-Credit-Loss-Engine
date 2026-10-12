@@ -118,6 +118,7 @@ COMMENT ON COLUMN loan_snapshot.current_fico IS 'Current FICO score. Null when D
 COMMENT ON COLUMN loan_snapshot.forbearance_flag IS 'Y = the loan is in a hardship (forbearance) plan. Values failing DQ009 are loaded as N.';
 COMMENT ON COLUMN loan_snapshot.remaining_months IS 'Remaining contractual term in months.';
 COMMENT ON COLUMN loan_snapshot.data_source IS 'LC_ACTUAL for the real base month, SIMULATED for generated months.';
+COMMENT ON COLUMN loan_snapshot.source_row_num IS 'STG_LOAN_SNAPSHOT.row_num (line in the file) the row came from: lineage back to the raw data.';
 COMMENT ON COLUMN loan_snapshot.run_id IS 'BATCH_RUN.run_id that loaded the row.';
 COMMENT ON COLUMN loan_snapshot.loaded_ts IS 'When the row was loaded.';
 

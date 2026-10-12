@@ -1,5 +1,5 @@
 {
-  "model_version": "PD_LR_20261013_020557",
+  "model_version": "PD_LR_20261013_021513",
   "artifact": "models/pd_model.joblib",
   "features": {
     "numeric": [

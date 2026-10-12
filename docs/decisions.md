@@ -134,3 +134,16 @@ With these in place, the Phase 11 check "floor_applied is Y exactly where the fl
 - **The level of the PDs is not recalibrated.** On the 2015 test vintage the model ranks well: the observed default rate rises in every decile, from 3.45% to 30.54%. But it under-predicts the level: 12.64% mean predicted against 14.82% observed. The spec asks for this model and no recalibration, so it is kept and the gap is stated in `docs/model_report.md`. A production model would be recalibrated to recent vintages or carry a margin of conservatism.
 - The model files have fixed names, `models/pd_model.joblib` (git-ignored) and `models/pd_model.json` (committed), with the version recorded inside the JSON and in `MODEL_REGISTRY`. Older versions stay in the registry with `active_flag = 'N'`.
 - `train_pd_model.py` also scores the live book (`pd_12m_orig`) in the same run, as Phase 5 asks. Both steps log to `BATCH_RUN` through `PKG_BATCH_LOG`, using `python/ecl/batchlog.py`.
+
+## D-018 · Phase 8 · Data quality design
+
+- **Rules are written against a view, `V_DQ_INPUT`.** The view is one staged row plus the facts rules need beyond the row: the loan id as a number, its copy number within the file (one window function), and its `LOAN_MASTER` data (one outer join). Every rule stays a short predicate and runs as a single set-based pass. A first sketch with a correlated `EXISTS` per row for duplicates would have been 100,000 x 100,000 comparisons a month.
+- **Two rules beyond the spec's ten:** DQ011 (remaining term not a whole number of at least 1) and DQ012 (data source not `LC_ACTUAL` or `SIMULATED`). With them, every column `load_clean` converts is guarded by a rule, so a bad value is rejected with a reason instead of failing the whole typed load.
+- **Lineage:** `LOAN_SNAPSHOT.source_row_num` records the file line each clean row came from. "No rejected row reaches `LOAN_SNAPSHOT`" can then be proved directly by a join, not inferred from loan ids.
+- **WARN fixes follow the column, not a rule id:** a WARN on `CURRENT_FICO` loads the FICO as null (scoring then uses the origination FICO), and a WARN on `FORBEARANCE_FLAG` loads N.
+- **`reconcile_control` and `run_checks` are separate steps** in `BATCH_RUN` (`RECONCILE_CONTROL`, `DQ_CHECKS`), so a failure says which check stopped the batch.
+- **Each monthly step checks its prerequisite** (`pkg_batch_log.require_step`): reconciliation needs a successful staging load, DQ checks a successful reconciliation since that load, and the clean load successful DQ checks. A restart from the wrong step fails with ORA-20005 instead of producing results from unchecked data.
+- `row_num` comes from `ROWNUM` over a serial (`NO_PARALLEL`) scan of the external table, which returns a single file's lines in order.
+- The reject-share limit is strict: the batch stops when the rejected share is *above* `DQ_MAX_REJECT_SHARE` (1%), not when it equals it.
+- `purge_date` deletes everything derived from a date. It never deletes from the audit tables (`STAGE_CHANGE_AUDIT`, `PARAM_AUDIT`, `BATCH_RUN`), which are append-only.
+- `tests/test_dq.py` builds its own file for an out-of-range date (2000-01-31) that breaks each rule exactly once, runs the real PL/SQL steps on it, and removes it again. The `BATCH_RUN` rows of those test runs stay, like every other log row.

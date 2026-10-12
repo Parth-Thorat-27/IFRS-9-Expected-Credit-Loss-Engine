@@ -67,3 +67,42 @@ COMMENT ON COLUMN v_data_dictionary.column_name IS 'Column name.';
 COMMENT ON COLUMN v_data_dictionary.data_type IS 'Oracle data type with length, precision and scale.';
 COMMENT ON COLUMN v_data_dictionary.nullable IS 'Y if the column accepts nulls.';
 COMMENT ON COLUMN v_data_dictionary.column_comment IS 'Description of the column.';
+
+------------------------------------------------------------------ V_DQ_INPUT
+-- What a data quality rule sees: one staged row plus the facts rules need
+-- beyond the row itself. Working them out once here keeps every rule a
+-- simple predicate and every rule a single set-based pass: the duplicate
+-- check is one window function instead of a lookup per row.
+CREATE OR REPLACE VIEW v_dq_input AS
+SELECT x.reporting_date, x.row_num, x.run_id, x.raw_reporting_date, x.loan_id, x.loan_status,
+       x.dpd, x.balance, x.current_fico, x.forbearance_flag, x.remaining_months, x.data_source,
+       x.loan_id_num,
+       -- 1 for the first row with this loan id in the file, 2 for the next copy, ...
+       CASE WHEN x.loan_id_num IS NOT NULL
+            THEN ROW_NUMBER() OVER (PARTITION BY x.reporting_date, x.loan_id_num ORDER BY x.row_num)
+       END AS copy_no,
+       CASE WHEN m.loan_id IS NOT NULL THEN 'Y' ELSE 'N' END AS in_master,
+       m.funded_amnt AS master_funded_amnt
+  FROM (SELECT s.*,
+               -- Numeric id, so "0123" and "123" count as the same loan.
+               CASE WHEN REGEXP_LIKE(TRIM(s.loan_id), '^[0-9]{1,12}$') THEN TO_NUMBER(TRIM(s.loan_id)) END AS loan_id_num
+          FROM stg_loan_snapshot s) x
+  LEFT JOIN loan_master m ON m.loan_id = x.loan_id_num;
+
+COMMENT ON TABLE v_dq_input IS 'Staged snapshot rows plus the facts data quality rules need: numeric loan id, copy number within the file, and LOAN_MASTER membership and funded amount. DQ_RULE predicates are written against this view (alias s).';
+COMMENT ON COLUMN v_dq_input.reporting_date IS 'Reporting date of the batch.';
+COMMENT ON COLUMN v_dq_input.row_num IS 'Line of the row in the file (1 = first data line).';
+COMMENT ON COLUMN v_dq_input.run_id IS 'Batch run that staged the row.';
+COMMENT ON COLUMN v_dq_input.raw_reporting_date IS 'Reporting date as written in the row.';
+COMMENT ON COLUMN v_dq_input.loan_id IS 'Loan id as received.';
+COMMENT ON COLUMN v_dq_input.loan_status IS 'Status as received.';
+COMMENT ON COLUMN v_dq_input.dpd IS 'Days past due as received.';
+COMMENT ON COLUMN v_dq_input.balance IS 'Balance as received.';
+COMMENT ON COLUMN v_dq_input.current_fico IS 'Current FICO as received.';
+COMMENT ON COLUMN v_dq_input.forbearance_flag IS 'Forbearance flag as received.';
+COMMENT ON COLUMN v_dq_input.remaining_months IS 'Remaining term as received.';
+COMMENT ON COLUMN v_dq_input.data_source IS 'Data source as received.';
+COMMENT ON COLUMN v_dq_input.loan_id_num IS 'Loan id as a number when it is 1-12 digits, otherwise null.';
+COMMENT ON COLUMN v_dq_input.copy_no IS 'How many times this loan id has appeared so far in the file (1 = first). Null when the id is not numeric.';
+COMMENT ON COLUMN v_dq_input.in_master IS 'Y if the loan id exists in LOAN_MASTER.';
+COMMENT ON COLUMN v_dq_input.master_funded_amnt IS 'LOAN_MASTER.funded_amnt for the loan (null when unknown).';
