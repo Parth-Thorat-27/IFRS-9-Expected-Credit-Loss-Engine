@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
+from sklearn.base import BaseEstimator, OneToOneFeatureMixin, TransformerMixin
 
 # Application-time columns kept for every loan (cleaned names). sub_grade and
 # addr_state are kept for reporting but are not model inputs: sub_grade only
@@ -60,6 +61,49 @@ def model_inputs() -> list[str]:
 def assert_no_leakage(columns: list[str]) -> None:
     leaked = sorted(c for c in columns if is_leakage(c))
     assert not leaked, f"leakage columns in the model inputs: {leaked}"
+
+
+class ClipToTrainingRange(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
+    """Cap each numeric feature at its training 1st and 99th percentiles.
+
+    A logistic model extrapolates in a straight line, so one absurd input
+    pushes the PD towards 100%. Lending Club stores an undefined
+    debt-to-income ratio as 999, far beyond anything in training. The caps
+    are learned in fit() from the training data only and travel inside the
+    saved Pipeline, so scoring applies exactly the same caps.
+    """
+
+    def __init__(self, lower: float = 0.01, upper: float = 0.99):
+        self.lower = lower
+        self.upper = upper
+
+    def fit(self, X, y=None):
+        values = np.asarray(X, dtype=float)
+        self.n_features_in_ = values.shape[1]
+        self.low_ = np.nanquantile(values, self.lower, axis=0)
+        self.high_ = np.nanquantile(values, self.upper, axis=0)
+        return self
+
+    def transform(self, X):
+        return np.clip(np.asarray(X, dtype=float), self.low_, self.high_)
+
+
+def to_category_strings(frame: pd.DataFrame) -> pd.DataFrame:
+    """Give every categorical column one type for the one-hot encoder.
+
+    36, 36.0 and "36" must all become the same category, and a missing value
+    must become its own category rather than an error. This runs inside the
+    saved Pipeline, so training and scoring always encode identically.
+    """
+    out = {}
+    for col in frame.columns:
+        values = frame[col]
+        if pd.api.types.is_numeric_dtype(values):
+            # Through Int64 so 36.0 becomes "36", not "36.0".
+            out[col] = values.astype("Int64").astype("string").fillna("missing")
+        else:
+            out[col] = values.astype("string").fillna("missing")
+    return pd.DataFrame(out, index=frame.index).astype(object)
 
 
 def add_derived_features(df: pd.DataFrame, fico: pd.Series | None = None) -> pd.DataFrame:

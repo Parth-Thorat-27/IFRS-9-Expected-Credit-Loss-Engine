@@ -1,0 +1,149 @@
+{
+  "model_version": "PD_LR_20261013_020557",
+  "artifact": "models/pd_model.joblib",
+  "features": {
+    "numeric": [
+      "loan_amnt",
+      "funded_amnt",
+      "int_rate",
+      "installment",
+      "log_annual_inc",
+      "dti",
+      "delinq_2yrs",
+      "fico",
+      "credit_history_months",
+      "inq_last_6mths",
+      "open_acc",
+      "pub_rec",
+      "log_revol_bal",
+      "revol_util",
+      "total_acc",
+      "mort_acc",
+      "pub_rec_bankruptcies"
+    ],
+    "categorical": [
+      "grade",
+      "term_months",
+      "home_ownership",
+      "verification_status",
+      "purpose",
+      "emp_length",
+      "application_type"
+    ]
+  },
+  "training_issue_dates": [
+    "2007-06-01",
+    "2014-12-01"
+  ],
+  "test_issue_dates": [
+    "2015-01-01",
+    "2015-12-01"
+  ],
+  "rows": {
+    "train": 145617,
+    "test": 104383
+  },
+  "metrics": {
+    "auc_train": 0.685733,
+    "auc_test": 0.686298,
+    "gini_test": 0.372596,
+    "ks_test": 0.269942,
+    "brier_test": 0.120043,
+    "train_default_rate": 0.147716,
+    "test_default_rate": 0.148185,
+    "train_mean_pd": 0.147725,
+    "test_mean_pd": 0.126352
+  },
+  "deciles": [
+    {
+      "decile": 1,
+      "loans": 10439.0,
+      "min_pd": 0.013216,
+      "max_pd": 0.048065,
+      "mean_pd": 0.038188,
+      "defaults": 360.0,
+      "default_rate": 0.034486
+    },
+    {
+      "decile": 2,
+      "loans": 10438.0,
+      "min_pd": 0.048066,
+      "max_pd": 0.063606,
+      "mean_pd": 0.055894,
+      "defaults": 581.0,
+      "default_rate": 0.055662
+    },
+    {
+      "decile": 3,
+      "loans": 10438.0,
+      "min_pd": 0.063609,
+      "max_pd": 0.07927,
+      "mean_pd": 0.07139,
+      "defaults": 842.0,
+      "default_rate": 0.080667
+    },
+    {
+      "decile": 4,
+      "loans": 10438.0,
+      "min_pd": 0.079271,
+      "max_pd": 0.095637,
+      "mean_pd": 0.087437,
+      "defaults": 1100.0,
+      "default_rate": 0.105384
+    },
+    {
+      "decile": 5,
+      "loans": 10439.0,
+      "min_pd": 0.095643,
+      "max_pd": 0.113337,
+      "mean_pd": 0.104362,
+      "defaults": 1319.0,
+      "default_rate": 0.126353
+    },
+    {
+      "decile": 6,
+      "loans": 10438.0,
+      "min_pd": 0.113339,
+      "max_pd": 0.132847,
+      "mean_pd": 0.122893,
+      "defaults": 1553.0,
+      "default_rate": 0.148783
+    },
+    {
+      "decile": 7,
+      "loans": 10438.0,
+      "min_pd": 0.132847,
+      "max_pd": 0.155561,
+      "mean_pd": 0.143917,
+      "defaults": 1755.0,
+      "default_rate": 0.168136
+    },
+    {
+      "decile": 8,
+      "loans": 10438.0,
+      "min_pd": 0.155563,
+      "max_pd": 0.183245,
+      "mean_pd": 0.168921,
+      "defaults": 2180.0,
+      "default_rate": 0.208852
+    },
+    {
+      "decile": 9,
+      "loans": 10438.0,
+      "min_pd": 0.183251,
+      "max_pd": 0.222542,
+      "mean_pd": 0.201304,
+      "defaults": 2590.0,
+      "default_rate": 0.248132
+    },
+    {
+      "decile": 10,
+      "loans": 10439.0,
+      "min_pd": 0.222563,
+      "max_pd": 0.58692,
+      "mean_pd": 0.269211,
+      "defaults": 3188.0,
+      "default_rate": 0.305393
+    }
+  ]
+}

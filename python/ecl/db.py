@@ -46,3 +46,21 @@ def connect() -> oracledb.Connection:
         password=_setting("APP_USER_PASSWORD"),
         dsn=dsn,
     )
+
+
+def read_frame(conn: oracledb.Connection, sql: str, binds: dict | None = None):
+    """Run a query and return a pandas DataFrame with lower-case column names."""
+    import pandas as pd  # only the steps that need DataFrames pay for the import
+
+    with conn.cursor() as cur:
+        # Fetch 10,000 rows per round trip instead of the default 100.
+        cur.arraysize = 10_000
+        cur.execute(sql, binds or {})
+        columns = [d[0].lower() for d in cur.description]
+        return pd.DataFrame(cur.fetchall(), columns=columns)
+
+
+def get_setting(conn: oracledb.Connection, name: str) -> float:
+    """A business setting from PARAM_SETTING (loaded from the XML config)."""
+    with conn.cursor() as cur:
+        return cur.callfunc("pkg_params.get_number", float, [name])
