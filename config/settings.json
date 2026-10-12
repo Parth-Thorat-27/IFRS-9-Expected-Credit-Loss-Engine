@@ -1,0 +1,20 @@
+{
+  "seed": 42,
+  "sampling": { "dev_loans": 250000, "live_loans": 100000 },
+  "base_reporting_date": null,
+  "simulation": {
+    "months": 6,
+    "error_rate": 0.001,
+    "fico_noise_sd": 8,
+    "fico_drop_on_roll": 35,
+    "fico_gain_on_cure": 15,
+    "forbearance_on_delinquency_prob": 0.02,
+    "roll_rates": {
+      "CURRENT":     { "CURRENT": 0.965, "DPD_1_30": 0.020, "PAID_OFF": 0.015 },
+      "DPD_1_30":    { "CURRENT": 0.45, "DPD_1_30": 0.15, "DPD_31_60": 0.38, "PAID_OFF": 0.02 },
+      "DPD_31_60":   { "CURRENT": 0.15, "DPD_1_30": 0.10, "DPD_31_60": 0.10, "DPD_61_90": 0.65 },
+      "DPD_61_90":   { "CURRENT": 0.08, "DPD_31_60": 0.05, "DPD_61_90": 0.12, "DPD_90_PLUS": 0.75 },
+      "DPD_90_PLUS": { "CURRENT": 0.03, "DPD_90_PLUS": 0.72, "WRITTEN_OFF": 0.25 }
+    }
+  }
+}

@@ -25,7 +25,7 @@ instead, and the reason.
   - with that rewriting off, `ROOT_DIR` is kept in `C:/Users/...` form (`cygpath -m`) so `python.exe` and `docker.exe` read paths correctly (without it Python looked for `C:\c\Users\...`);
   - `PYTHON` is found in `.venv/bin` (Linux) or `.venv/Scripts` (Windows);
   - `.env` is read with carriage returns stripped.
-- **Still open:** Git Bash has no `flock` and no `cron`, which Phase 12 needs. Either install Ubuntu in WSL2 before Phase 12 (the spec's intent), or stay on Git Bash and accept a fallback lock and a crontab that is documented but not scheduled. The project owner decides.
+- **Decided after Phase 1:** stay on Git Bash for the whole build, so nothing is installed system-wide. Git Bash has no `flock` and no `cron`, so Phase 12 uses `flock` when it exists (Linux, WSL) and otherwise falls back to an atomic `mkdir` lock with the same behaviour. Cron is shipped as `scripts/crontab.example` and documented, but not scheduled on this machine. The spec says as much: the demo dates are historical, and `run_all_months.sh` is how the project actually runs.
 
 ## D-002 · Phase 1 · SPEC.md transcribed from the PDF
 
@@ -54,3 +54,23 @@ instead, and the reason.
 - The Phase 1 smoke check is `scripts/smoke_test.sh` plus `python/smoke_db.py`; the spec asks for "a smoke script" without naming it.
 - `run_sql` checks the SQL*Plus output as well as the exit code, because `WHENEVER SQLERROR` misses three kinds of failure: SQL*Plus's own `SP2-` errors, "created with compilation errors" warnings, and exit codes that wrap to 0 (the code is SQLCODE mod 256, so ORA-01536 would exit 0). It filters the output as a stream instead of writing a temp file, so a killed run leaves nothing behind.
 - `run_sql` sends the password on stdin (`sqlplus /nolog` then `CONNECT`), so it never appears on a command line inside the container.
+
+## D-007 · Phase 2 · Data downloaded from Kaggle's public endpoint
+
+- **Spec:** the owner downloads the file from Kaggle with a free account, because Claude Code can't log in.
+- **Done instead:** Kaggle's dataset download URL (`https://www.kaggle.com/api/v1/datasets/download/wordsforthewise/lending-club`) answered without a login and redirected to the bundle on Google Cloud Storage (1,356,507,910 bytes). Only `accepted_2007_to_2018Q4.csv` (1,675,133,810 bytes, 2,260,701 data lines) was extracted into `data/raw/`; the zip and the "rejected" files were discarded.
+
+## D-008 · Phase 2 · Base reporting date is 2019-03-31
+
+- **Spec:** base reporting date = month-end of the latest `last_pymnt_d` in the file; check it and record it here.
+- **Result:** the latest `last_pymnt_d` is Mar-2019, so the base reporting date is **2019-03-31**. Check: 833,650 of the 912,609 open loans in the file made their last payment in Mar-2019, so the date matches the state of the book. `settings.json` keeps `base_reporting_date: null`.
+
+## D-009 · Phase 2 · Small data-preparation choices
+
+- `int_rate` and `revol_util` are stored as fractions (13.99% becomes 0.1399), because the ECL formulas use r = `int_rate` / 12 directly.
+- The log features use `log1p` (log of 1 + x) instead of `log`: `annual_inc` and `revol_bal` both contain genuine zeros, and log(0) is undefined.
+- Processed files rename `id` to `loan_id` and `term` to `term_months` (an integer), so the database columns say what they hold.
+- `sub_grade` and `addr_state` are kept for reporting but are not model features. The spec's one-hot list doesn't include them, and `sub_grade` only refines `grade` and `int_rate`, which the model already has.
+- Remaining term is counted in calendar months between the issue month and the base month.
+- The live-book sample keeps the status mix exactly. Each status gets its proportional share, and the largest remainders absorb the rounding so the total is exactly 100,000.
+- Each random step (dev sample, live sample, starting DPD) has its own seeded stream, so changing one can't silently change the others.
