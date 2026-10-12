@@ -20,6 +20,10 @@ PROMPT [6/9] packages
 @@packages/pkg_batch_log.pkb
 @@packages/pkg_params.pks
 @@packages/pkg_params.pkb
+@@packages/pkg_load.pks
+@@packages/pkg_load.pkb
+@@packages/pkg_lgd.pks
+@@packages/pkg_lgd.pkb
 PROMPT [7/9] triggers
 @@triggers/trg_param_audit.sql
 PROMPT [8/9] seed data
