@@ -1,0 +1,23 @@
+# Pinned to the versions installed and tested with Python 3.11.9.
+# Install into the project venv:  python -m pip install -r python/requirements.txt
+
+# Database access in thin mode (no Oracle Instant Client needed on the host).
+oracledb==26.0.1
+# Reads .env so Python uses the same settings as docker-compose and bash.
+python-dotenv==1.2.4
+
+# Data preparation, simulation and modelling.
+pandas==3.0.6
+numpy==2.4.6
+scikit-learn==1.9.1
+# Saves the trained PD model (also a scikit-learn dependency; pinned because we import it).
+joblib==1.6.0
+
+# XSD validation of config/ecl_parameters.xml.
+lxml==6.1.3
+
+# Charts in the HTML report.
+matplotlib==3.11.2
+
+# Tests.
+pytest==9.1.1

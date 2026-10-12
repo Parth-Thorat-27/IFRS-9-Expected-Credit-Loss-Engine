@@ -1,0 +1,45 @@
+# One Oracle Database Free container for the whole project.
+#
+# Regular gvenzl flavour, not -slim: the engine needs XML DB (XMLTYPE, XMLTABLE)
+# for the parameter file and external tables for the monthly CSVs, and the slim
+# image removes both.
+#
+# All settings come from .env (see .env.example). Compose refuses to start if a
+# password is missing instead of silently creating a database with no password.
+name: ifrs9-ecl-engine
+
+services:
+  ecl-oracle:
+    # Pinned version, so rebuilding the container gives the same database release.
+    image: gvenzl/oracle-free:23.26.3
+    # Fixed name so every script can simply run `docker exec ecl-oracle ...`.
+    container_name: ecl-oracle
+    environment:
+      ORACLE_PASSWORD: ${ORACLE_PASSWORD:?set ORACLE_PASSWORD in .env}
+      APP_USER: ${APP_USER:-ECL}
+      APP_USER_PASSWORD: ${APP_USER_PASSWORD:?set APP_USER_PASSWORD in .env}
+    ports:
+      - "${ORACLE_PORT:-1521}:1521"
+    volumes:
+      # Datafiles live in a named volume, so the database survives
+      # `docker compose down` and container rebuilds.
+      - ecl-oradata:/opt/oracle/oradata
+      # SQL*Plus runs inside the container, so it must see the SQL scripts.
+      - ./db:/opt/ecl/db:ro
+      # Read by PKG_PARAMS through the ECL_CONFIG_DIR directory object (BFILE).
+      - ./config:/opt/ecl/config:ro
+      # External tables read the CSVs here and Oracle writes its .log/.bad
+      # files next to them, so these two mounts stay read-write.
+      - ./data/incoming:/opt/ecl/data/incoming
+      - ./data/processed:/opt/ecl/data/processed
+    healthcheck:
+      # healthcheck.sh ships with the gvenzl image; it passes once the database is open.
+      test: ["CMD", "healthcheck.sh"]
+      interval: 10s
+      timeout: 10s
+      retries: 30
+      # First start unpacks the database into the empty volume, which takes a while.
+      start_period: 180s
+
+volumes:
+  ecl-oradata:

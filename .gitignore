@@ -1,0 +1,35 @@
+# Secrets: real passwords live in .env; only .env.example is committed.
+.env
+
+# Data never goes into git: the raw Kaggle file is ~1.6 GB and everything
+# else under data/ is derived from it by the pipeline.
+data/raw/*
+data/processed/*
+data/incoming/*
+data/archive/*
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+!data/incoming/.gitkeep
+!data/archive/.gitkeep
+
+# Generated on every run (one sample report is copied into docs/sample_report/).
+reports/*
+!reports/.gitkeep
+logs/*
+!logs/.gitkeep
+
+# Model binaries are rebuilt by train_pd_model.py; the metadata JSON is committed.
+models/*.joblib
+models/*.pkl
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Editors and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

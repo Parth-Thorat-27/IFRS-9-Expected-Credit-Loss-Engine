@@ -1,0 +1,8 @@
+# Bash scripts and SQL run inside Linux (the Oracle container, WSL or Git Bash).
+# A CRLF line ending breaks them ("$'\r': command not found", SP2 errors), and
+# Git for Windows converts to CRLF on checkout by default. Pin LF for all text.
+* text=auto eol=lf
+
+*.joblib binary
+*.png    binary
+*.gz     binary
