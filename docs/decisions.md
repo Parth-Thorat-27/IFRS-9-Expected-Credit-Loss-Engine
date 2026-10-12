@@ -74,3 +74,36 @@ instead, and the reason.
 - Remaining term is counted in calendar months between the issue month and the base month.
 - The live-book sample keeps the status mix exactly. Each status gets its proportional share, and the largest remainders absorb the rounding so the total is exactly 100,000.
 - Each random step (dev sample, live sample, starting DPD) has its own seeded stream, so changing one can't silently change the others.
+
+## D-010 · Phase 3 · Directory objects in their own script, run as SYSTEM
+
+- **Spec:** `db/04_directories_external_tables.sql` holds both the directory objects and the external tables; `setup_db.sh` runs the directory part as SYSTEM and the rest as ECL.
+- **Done instead:** two files. `db/00_directories.sql` (directories and grants, run as SYSTEM, first) and `db/04_external_tables.sql` (external tables, run as ECL). A single SQL*Plus script can't switch accounts without a password written in the file.
+- **Also:** a fourth directory, `ECL_LOG_DIR`, over a new bind mount `./logs:/opt/ecl/logs`. The external-table access driver writes its `.log` and `.bad` files there, next to the batch logs, instead of filling `data/incoming` with them. The data directories are granted READ only.
+
+## D-011 · Phase 3 · External tables are documented in EXT_TABLE_DOC
+
+- **Spec:** `COMMENT ON TABLE` / `COMMENT ON COLUMN` for every table and column; a query on `USER_TAB_COMMENTS` and `USER_COL_COMMENTS` returns nothing uncommented.
+- **Found:** Oracle 23.26 rejects both statements for external tables with ORA-30657 ("operation not supported on external organized table"), yet still lists their 83 columns in `USER_COL_COMMENTS` with empty comments.
+- **Done instead:** their descriptions go into a small table, `EXT_TABLE_DOC`. The view `V_DATA_DICTIONARY` merges them with the normal comments, and the data dictionary generator reads that view. The Phase 3 check showed 0 uncommented normal tables, views or columns, and 0 undocumented columns in the merged view (370 columns in total).
+
+## D-012 · Phase 3 · Extra tables: LOAN_STAGE_HISTORY, MONTH_IDX
+
+- `LOAN_STAGE_HISTORY` keeps the stage decision for every loan and month, with the cure counter and stage dates. Each month's assessment starts from the previous month's row there, not from `LOAN_STAGE_CURRENT`. Re-running a month therefore gives the same answer instead of counting a cure month twice, as the "every script must be re-runnable" rule requires. `LOAN_STAGE_CURRENT` is still the latest stage per loan and still carries the audit trigger.
+- `MONTH_IDX` (months 1 to 60) is the row source that `run_v2` joins to. The spec allows either it or `CONNECT BY LEVEL`; a real table gives the optimizer an accurate row count.
+- `PKG_BATCH_LOG` and `BATCH_RUN` were built in Phase 3 rather than Phase 8, because the Phase 4 history load already logs to `BATCH_RUN`.
+
+## D-013 · Phase 3 · Constraints that enforce the ECL rules
+
+Beyond the spec's checks (stage 1-3, PD and LGD 0-1, Y/N flags), two check constraints enforce the floor logic on every ECL row:
+
+- `ecl_final = GREATEST(ecl_weighted, floor_amount)`;
+- `floor_applied = 'Y'` exactly when `floor_amount > ecl_weighted`.
+
+With these in place, the Phase 11 check "floor_applied is Y exactly where the floor won" is guaranteed by the database, not just tested once.
+
+## D-014 · Phase 3 · Shell and SQL*Plus details found while testing
+
+- `@@packages/x.pks` inside `install.sql` failed with SP2-0310. SQL*Plus resolves `@@file` against the calling script's folder, but `@@folder/file` against its own working directory. `run_sql` now starts SQL*Plus in the script's folder (`docker exec -w`), so both forms mean "relative to this script". Run without `WHENEVER OSERROR`, the same failure only printed SP2 warnings and the install "succeeded" with exit code 0. That is the blind spot `run_sql`'s output scan exists for.
+- A failing `$(...)` inside another command's arguments (`log "... $(sql_value ...)"`) does not stop a `set -e` script; only a failing assignment does. Scripts assign first and use the variable after, and `common.sh` sets `shopt -s inherit_errexit`.
+- `WHENEVER SQLERROR EXIT SQL.SQLCODE ROLLBACK` (with an explicit ROLLBACK) is used, so a failed script never commits half its work on the way out.

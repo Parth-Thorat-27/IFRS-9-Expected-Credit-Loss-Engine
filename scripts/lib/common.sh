@@ -16,6 +16,8 @@
 #   -u           an unset variable is a bug, not an empty string
 #   -o pipefail  a pipeline fails when any command in it fails, not only the last one
 set -Eeuo pipefail
+# Make set -e apply inside $(...) too, so x=$(step1; step2) stops at a failing step1.
+shopt -s inherit_errexit
 
 # Sourcing twice would stack traps and re-read .env.
 if [[ -n "${_ECL_COMMON_LOADED:-}" ]]; then return 0; fi
@@ -133,13 +135,17 @@ run_sql() {
     *) die 2 "run_sql: unknown account '$account' (use ECL or SYSTEM)" ;;
   esac
 
-  local what="inline SQL" run_line=""
+  local what="inline SQL" run_line="" workdir="/opt/ecl/db"
   if [[ "$src" != "-" ]]; then
     # Only db/ is mounted into the container, so SQL files must live there.
     [[ "$src" == db/* ]] || die 2 "run_sql: $src is not under db/"
     [[ -f "$ROOT_DIR/$src" ]] || die "run_sql: $src not found"
     what="$src"
     run_line="@/opt/ecl/$src${*:+ $*}"
+    # SQL*Plus resolves "@@file.sql" against the calling script's folder, but
+    # "@@packages/file.sql" against its own working directory. Starting it in
+    # the script's folder makes both forms mean "relative to this script".
+    workdir="/opt/ecl/$(dirname "$src")"
   fi
 
   local rc=0
@@ -153,7 +159,7 @@ run_sql() {
     printf 'CONNECT %s/"%s"@//localhost:1521/%s\n' "$user" "$pass" "$ORACLE_SERVICE"
     if [[ -n "$run_line" ]]; then printf '%s\n' "$run_line"; else cat; fi
     printf '\nEXIT SUCCESS\n'
-  } | docker exec -i "$ORACLE_CONTAINER" sqlplus -S -L /nolog 2>&1 | _sqlplus_filter || rc=$?
+  } | docker exec -i -w "$workdir" "$ORACLE_CONTAINER" sqlplus -S -L /nolog 2>&1 | _sqlplus_filter || rc=$?
 
   if ((rc != 0)); then log ERROR "SQL*Plus failed running $what as $user (error lines above)"; fi
   return "$rc"
@@ -171,6 +177,18 @@ _sqlplus_filter() {
     { print; fflush(); if (logfile != "") print >> logfile }
     /^(SP2-[0-9]+|ORA-[0-9]+|PLS-[0-9]+)/ || /with compilation errors/ { failed = 1 }
     END { exit failed ? 3 : 0 }'
+}
+
+# sql_value <ECL|SYSTEM> "<query returning one row>"
+# Prints the query's result with surrounding blanks removed, for use as
+#   count=$(sql_value ECL "SELECT COUNT(*) FROM loan_master")
+sql_value() {
+  local account="$1" query="$2"
+  # DEFINE OFF so an & in the query is not taken for a substitution variable.
+  run_sql "$account" - <<SQL | awk 'NF { $1 = $1; print }'
+SET HEADING OFF FEEDBACK OFF PAGESIZE 0 VERIFY OFF TAB OFF DEFINE OFF LINESIZE 32767
+$query;
+SQL
 }
 
 # wait_for_db [timeout_seconds]

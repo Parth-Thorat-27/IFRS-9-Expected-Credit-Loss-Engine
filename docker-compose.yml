@@ -28,10 +28,12 @@ services:
       - ./db:/opt/ecl/db:ro
       # Read by PKG_PARAMS through the ECL_CONFIG_DIR directory object (BFILE).
       - ./config:/opt/ecl/config:ro
-      # External tables read the CSVs here and Oracle writes its .log/.bad
-      # files next to them, so these two mounts stay read-write.
+      # External tables read the CSVs here.
       - ./data/incoming:/opt/ecl/data/incoming
       - ./data/processed:/opt/ecl/data/processed
+      # The external table access driver writes its .log and .bad files here
+      # (ECL_LOG_DIR), next to the batch logs and cleaned up with them.
+      - ./logs:/opt/ecl/logs
     healthcheck:
       # healthcheck.sh ships with the gvenzl image; it passes once the database is open.
       test: ["CMD", "healthcheck.sh"]
