@@ -65,13 +65,22 @@ def build_pipeline() -> Pipeline:
         # makes the coefficients comparable.
         ("scale", StandardScaler()),
     ])
+    # FICO is not capped. Lending Club only lent at FICO 660+, but monthly
+    # scoring deliberately feeds in today's FICO, which can be far lower; a
+    # cap at the training minimum would erase exactly the deterioration the
+    # PD-deterioration staging test is meant to catch.
+    fico = Pipeline([
+        ("impute", SimpleImputer(strategy="median")),
+        ("scale", StandardScaler()),
+    ])
     categorical = Pipeline([
         ("as_text", FunctionTransformer(features.to_category_strings, feature_names_out="one-to-one")),
         # A category never seen in training (a new purpose, say) is all zeros, not an error.
         ("one_hot", OneHotEncoder(handle_unknown="ignore")),
     ])
     prep = ColumnTransformer([
-        ("num", numeric, features.NUMERIC_FEATURES),
+        ("num", numeric, [c for c in features.NUMERIC_FEATURES if c != "fico"]),
+        ("fico", fico, ["fico"]),
         ("cat", categorical, features.CATEGORICAL_FEATURES),
     ])
     # No class_weight and no resampling: up-weighting defaults would push every
@@ -180,7 +189,7 @@ def write_report(version: str, train: pd.DataFrame, test: pd.DataFrame, m: dict,
         "",
         "Application-time information only:",
         "",
-        f"- Numeric (median imputation, capped at the training 1st and 99th percentiles, then standard scaling): {', '.join(f'`{c}`' for c in features.NUMERIC_FEATURES)}.",
+        f"- Numeric (median imputation, capped at the training 1st and 99th percentiles except `fico`, then standard scaling): {', '.join(f'`{c}`' for c in features.NUMERIC_FEATURES)}.",
         f"- Categorical (one-hot, missing as its own category): {', '.join(f'`{c}`' for c in features.CATEGORICAL_FEATURES)}.",
         "- Derived: `fico` = midpoint of `fico_range_low` and `fico_range_high`; `credit_history_months` = "
         "`issue_d` minus `earliest_cr_line`; `log_annual_inc` and `log_revol_bal` = log(1 + x).",

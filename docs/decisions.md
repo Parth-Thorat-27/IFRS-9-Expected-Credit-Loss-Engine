@@ -153,3 +153,18 @@ With these in place, the Phase 11 check "floor_applied is Y exactly where the fl
 - `PD_SCORE` also stores the FICO value fed to the model (`fico_used`) and where it came from (`fico_source` = CURRENT or ORIGINATION). That makes the DQ008 fallback visible per loan. In every month the ORIGINATION count equals that month's DQ008 warnings (137 in March 2019).
 - `score_pd.py` refuses to run if `models/pd_model.json` is not the version `MODEL_REGISTRY` marks active, or if the date's clean load has not succeeded since it was last staged. A month is never scored with a model the registry doesn't know, or on half-loaded data.
 - The FICO-band check compares current FICO with the midpoint of the origination FICO range. "Unchanged" means exactly equal.
+
+## D-020 · Phase 10 · FICO is exempt from the feature caps (revises D-017)
+
+- **Found in Phase 10:** with every numeric feature capped (D-017), no loan in any month met the PD-deterioration test. The largest `pd_12m_current / pd_12m_orig` across 642,335 loan-months was 1.76, below the 2x threshold. Lending Club only lent at FICO 660 and above, so the cap set FICO's floor near the training minimum, and a current FICO of 362 was scored as if it were about 660. One loan whose FICO fell from 722 to 362 had its PD rise only 26%.
+- **Change:** FICO gets its own pipeline branch (impute and scale, no cap); every other numeric feature keeps the caps, which still handle `dti = 999`. The methodology deliberately feeds today's FICO into a model trained on origination FICO, so FICO is the one input meant to go beyond its training range.
+- **Result:** the out-of-time metrics barely move (test AUC 0.6863 to 0.6861). The largest PD ratio is now 4.49, PD_DETERIORATION stages 127 to 176 loans per month, and the highest `pd_12m_current` is 0.3813.
+- After the change the database was rebuilt from scratch. `STAGE_CHANGE_AUDIT` is append-only, so changing the model and re-staging old months in place would mix audit rows from two models.
+
+## D-021 · Phase 10 · Staging implementation details
+
+- `fn_assign_stage` returns an object type, `stage_decision_t` (stage, reason code, updated cure counter). One pure function can then return all three, and SQL can still read each part. It is `DETERMINISTIC` and has `PRAGMA UDF`, because `assign_stages` calls it once per loan from SQL. A seven-argument overload reads the thresholds from the parameters, for tests and ad-hoc use.
+- `assign_stages` is two set-based statements plus the exit update, not literally "one MERGE". The decisions go into `LOAN_STAGE_HISTORY`, starting from each loan's latest previous assessment (D-012). Then one MERGE copies them into `LOAN_STAGE_CURRENT`, which fires the audit trigger. Re-running a month gives an identical history (checked with an `ORA_HASH` over the month) and writes no new audit rows.
+- A loan missing from a month's clean snapshot is marked `exited_flag = 'Y'`, not deleted. If it returns the next month (its row was rejected by data quality, for example), its stage continues from its last assessment. That is why, in a few cases a month, the audit compares against an assessment two months back. The Phase 10 check counts changes against the previous assessment and matched every month.
+- `stage3_since` is backdated by the DPD beyond 90 the first time a loan is seen in Stage 3: a loan at 125 DPD crossed 90 days 34 days earlier. The time-in-Stage-3 floor then counts from the real crossing day, not from the first reporting date the engine saw.
+- Re-running an older month while later months exist rebuilds that month's history only and leaves `LOAN_STAGE_CURRENT` alone. The later months must then be re-run too (runbook).

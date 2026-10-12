@@ -26,8 +26,11 @@ PROMPT [6/9] packages
 @@packages/pkg_lgd.pkb
 @@packages/pkg_dq.pks
 @@packages/pkg_dq.pkb
+@@packages/pkg_staging.pks
+@@packages/pkg_staging.pkb
 PROMPT [7/9] triggers
 @@triggers/trg_param_audit.sql
+@@triggers/trg_stage_change_audit.sql
 PROMPT [8/9] seed data
 @@seed/month_idx.sql
 @@seed/dq_rules.sql

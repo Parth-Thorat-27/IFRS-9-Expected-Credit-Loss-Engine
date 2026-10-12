@@ -1,5 +1,5 @@
 {
-  "model_version": "PD_LR_20261013_021513",
+  "model_version": "PD_LR_20261013_022539",
   "artifact": "models/pd_model.joblib",
   "features": {
     "numeric": [
@@ -44,106 +44,106 @@
     "test": 104383
   },
   "metrics": {
-    "auc_train": 0.685733,
-    "auc_test": 0.686298,
-    "gini_test": 0.372596,
-    "ks_test": 0.269942,
-    "brier_test": 0.120043,
+    "auc_train": 0.685759,
+    "auc_test": 0.686136,
+    "gini_test": 0.372273,
+    "ks_test": 0.270126,
+    "brier_test": 0.120055,
     "train_default_rate": 0.147716,
     "test_default_rate": 0.148185,
-    "train_mean_pd": 0.147725,
-    "test_mean_pd": 0.126352
+    "train_mean_pd": 0.147704,
+    "test_mean_pd": 0.126335
   },
   "deciles": [
     {
       "decile": 1,
       "loans": 10439.0,
-      "min_pd": 0.013216,
-      "max_pd": 0.048065,
-      "mean_pd": 0.038188,
-      "defaults": 360.0,
-      "default_rate": 0.034486
+      "min_pd": 0.011774,
+      "max_pd": 0.04799,
+      "mean_pd": 0.037992,
+      "defaults": 357.0,
+      "default_rate": 0.034199
     },
     {
       "decile": 2,
       "loans": 10438.0,
-      "min_pd": 0.048066,
-      "max_pd": 0.063606,
-      "mean_pd": 0.055894,
-      "defaults": 581.0,
-      "default_rate": 0.055662
+      "min_pd": 0.047992,
+      "max_pd": 0.063655,
+      "mean_pd": 0.055895,
+      "defaults": 590.0,
+      "default_rate": 0.056524
     },
     {
       "decile": 3,
       "loans": 10438.0,
-      "min_pd": 0.063609,
-      "max_pd": 0.07927,
-      "mean_pd": 0.07139,
-      "defaults": 842.0,
-      "default_rate": 0.080667
+      "min_pd": 0.063657,
+      "max_pd": 0.07934,
+      "mean_pd": 0.071447,
+      "defaults": 839.0,
+      "default_rate": 0.080379
     },
     {
       "decile": 4,
       "loans": 10438.0,
-      "min_pd": 0.079271,
-      "max_pd": 0.095637,
-      "mean_pd": 0.087437,
-      "defaults": 1100.0,
-      "default_rate": 0.105384
+      "min_pd": 0.07934,
+      "max_pd": 0.095709,
+      "mean_pd": 0.087506,
+      "defaults": 1103.0,
+      "default_rate": 0.105672
     },
     {
       "decile": 5,
       "loans": 10439.0,
-      "min_pd": 0.095643,
-      "max_pd": 0.113337,
-      "mean_pd": 0.104362,
-      "defaults": 1319.0,
-      "default_rate": 0.126353
+      "min_pd": 0.095711,
+      "max_pd": 0.113373,
+      "mean_pd": 0.104433,
+      "defaults": 1316.0,
+      "default_rate": 0.126066
     },
     {
       "decile": 6,
       "loans": 10438.0,
-      "min_pd": 0.113339,
-      "max_pd": 0.132847,
-      "mean_pd": 0.122893,
-      "defaults": 1553.0,
-      "default_rate": 0.148783
+      "min_pd": 0.113375,
+      "max_pd": 0.132884,
+      "mean_pd": 0.122945,
+      "defaults": 1556.0,
+      "default_rate": 0.149071
     },
     {
       "decile": 7,
       "loans": 10438.0,
-      "min_pd": 0.132847,
-      "max_pd": 0.155561,
-      "mean_pd": 0.143917,
-      "defaults": 1755.0,
-      "default_rate": 0.168136
+      "min_pd": 0.132887,
+      "max_pd": 0.155599,
+      "mean_pd": 0.143927,
+      "defaults": 1748.0,
+      "default_rate": 0.167465
     },
     {
       "decile": 8,
       "loans": 10438.0,
-      "min_pd": 0.155563,
-      "max_pd": 0.183245,
-      "mean_pd": 0.168921,
-      "defaults": 2180.0,
-      "default_rate": 0.208852
+      "min_pd": 0.155599,
+      "max_pd": 0.183244,
+      "mean_pd": 0.168879,
+      "defaults": 2187.0,
+      "default_rate": 0.209523
     },
     {
       "decile": 9,
       "loans": 10438.0,
-      "min_pd": 0.183251,
-      "max_pd": 0.222542,
-      "mean_pd": 0.201304,
-      "defaults": 2590.0,
-      "default_rate": 0.248132
+      "min_pd": 0.183247,
+      "max_pd": 0.222394,
+      "mean_pd": 0.201226,
+      "defaults": 2591.0,
+      "default_rate": 0.248228
     },
     {
       "decile": 10,
       "loans": 10439.0,
-      "min_pd": 0.222563,
-      "max_pd": 0.58692,
-      "mean_pd": 0.269211,
-      "defaults": 3188.0,
-      "default_rate": 0.305393
+      "min_pd": 0.222399,
+      "max_pd": 0.588536,
+      "mean_pd": 0.269102,
+      "defaults": 3181.0,
+      "default_rate": 0.304723
     }
   ]
 }
