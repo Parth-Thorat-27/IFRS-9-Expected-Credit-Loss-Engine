@@ -147,3 +147,9 @@ With these in place, the Phase 11 check "floor_applied is Y exactly where the fl
 - The reject-share limit is strict: the batch stops when the rejected share is *above* `DQ_MAX_REJECT_SHARE` (1%), not when it equals it.
 - `purge_date` deletes everything derived from a date. It never deletes from the audit tables (`STAGE_CHANGE_AUDIT`, `PARAM_AUDIT`, `BATCH_RUN`), which are append-only.
 - `tests/test_dq.py` builds its own file for an out-of-range date (2000-01-31) that breaks each rule exactly once, runs the real PL/SQL steps on it, and removes it again. The `BATCH_RUN` rows of those test runs stay, like every other log row.
+
+## D-019 · Phase 9 · Monthly scoring details
+
+- `PD_SCORE` also stores the FICO value fed to the model (`fico_used`) and where it came from (`fico_source` = CURRENT or ORIGINATION). That makes the DQ008 fallback visible per loan. In every month the ORIGINATION count equals that month's DQ008 warnings (137 in March 2019).
+- `score_pd.py` refuses to run if `models/pd_model.json` is not the version `MODEL_REGISTRY` marks active, or if the date's clean load has not succeeded since it was last staged. A month is never scored with a model the registry doesn't know, or on half-loaded data.
+- The FICO-band check compares current FICO with the midpoint of the origination FICO range. "Unchanged" means exactly equal.
