@@ -16,8 +16,5 @@ joblib==1.6.0
 # XSD validation of config/ecl_parameters.xml.
 lxml==6.1.3
 
-# Charts in the HTML report.
-matplotlib==3.11.2
-
 # Tests.
 pytest==9.1.1
