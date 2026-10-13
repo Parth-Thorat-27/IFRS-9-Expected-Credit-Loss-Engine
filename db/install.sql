@@ -28,6 +28,8 @@ PROMPT [6/9] packages
 @@packages/pkg_dq.pkb
 @@packages/pkg_staging.pks
 @@packages/pkg_staging.pkb
+@@packages/pkg_ecl.pks
+@@packages/pkg_ecl.pkb
 PROMPT [7/9] triggers
 @@triggers/trg_param_audit.sql
 @@triggers/trg_stage_change_audit.sql

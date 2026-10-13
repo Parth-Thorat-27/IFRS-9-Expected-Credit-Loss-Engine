@@ -106,3 +106,68 @@ COMMENT ON COLUMN v_dq_input.loan_id_num IS 'Loan id as a number when it is 1-12
 COMMENT ON COLUMN v_dq_input.copy_no IS 'How many times this loan id has appeared so far in the file (1 = first). Null when the id is not numeric.';
 COMMENT ON COLUMN v_dq_input.in_master IS 'Y if the loan id exists in LOAN_MASTER.';
 COMMENT ON COLUMN v_dq_input.master_funded_amnt IS 'LOAN_MASTER.funded_amnt for the loan (null when unknown).';
+
+------------------------------------------------------------------ V_ECL_INPUT
+-- Everything the ECL needs for one loan on one reporting date, in one row.
+-- Both engines read this view, so run_v1 and run_v2 start from exactly the
+-- same inputs and can only differ in how they calculate.
+CREATE OR REPLACE VIEW v_ecl_input AS
+SELECT s.reporting_date,
+       s.loan_id,
+       m.grade,
+       h.stage,
+       h.reason_code,
+       s.balance,
+       m.int_rate,
+       s.remaining_months,
+       -- 12 months of losses for Stage 1, the remaining life for Stage 2,
+       -- none for Stage 3 (ECL = LGD x balance, no schedule).
+       CASE h.stage WHEN 1 THEN LEAST(12, s.remaining_months)
+                    WHEN 2 THEN s.remaining_months
+                    ELSE 0 END AS horizon_months,
+       s.dpd,
+       s.forbearance_flag AS restructured_flag,
+       CASE WHEN h.stage = 3 THEN FLOOR(MONTHS_BETWEEN(s.reporting_date, h.stage3_since)) END AS months_in_stage3,
+       l.lgd,
+       p.pd_12m_current,
+       dm.multiplier AS dpd_multiplier,
+       -- Measurement PD: Stage 3 has defaulted (PD 1); otherwise the current
+       -- PD times the DPD multiplier, capped.
+       CASE WHEN h.stage = 3 THEN 1 ELSE LEAST(p.pd_12m_current * dm.multiplier, c.pd_cap) END AS pd_12m,
+       c.pd_cap,
+       f.floor_rate
+  FROM loan_snapshot s
+  JOIN loan_master m        ON m.loan_id = s.loan_id
+  JOIN loan_stage_history h ON h.reporting_date = s.reporting_date AND h.loan_id = s.loan_id
+  JOIN pd_score p           ON p.reporting_date = s.reporting_date AND p.loan_id = s.loan_id
+  JOIN param_lgd l          ON l.grade = m.grade
+  CROSS JOIN (SELECT setting_value AS pd_cap FROM param_setting WHERE setting_name = 'PD_CAP') c
+  -- Stage 3 loans are past 90 DPD, beyond the last band; they don't use a multiplier.
+  LEFT JOIN param_dpd_multiplier dm ON s.dpd BETWEEN dm.from_dpd AND dm.to_dpd
+  LEFT JOIN param_floor f
+    ON f.stage = h.stage
+   AND (   (h.stage IN (1, 2) AND f.restructured_flag = s.forbearance_flag)
+        OR (h.stage = 3 AND f.restructured_flag = '*'
+            AND FLOOR(MONTHS_BETWEEN(s.reporting_date, h.stage3_since)) >= f.months_in_stage3_from
+            AND (f.months_in_stage3_to IS NULL
+                 OR FLOOR(MONTHS_BETWEEN(s.reporting_date, h.stage3_since)) < f.months_in_stage3_to)));
+
+COMMENT ON TABLE v_ecl_input IS 'One row per loan per reporting date with every ECL input: stage, balance, rate, horizon, LGD, measurement PD and floor rate. PKG_ECL.run_v1 and run_v2 both read it.';
+COMMENT ON COLUMN v_ecl_input.reporting_date IS 'Reporting date.';
+COMMENT ON COLUMN v_ecl_input.loan_id IS 'Loan.';
+COMMENT ON COLUMN v_ecl_input.grade IS 'Lending Club grade (selects the LGD).';
+COMMENT ON COLUMN v_ecl_input.stage IS 'Stage from LOAN_STAGE_HISTORY.';
+COMMENT ON COLUMN v_ecl_input.reason_code IS 'Staging reason code.';
+COMMENT ON COLUMN v_ecl_input.balance IS 'Outstanding principal, USD.';
+COMMENT ON COLUMN v_ecl_input.int_rate IS 'Annual contract rate (fraction).';
+COMMENT ON COLUMN v_ecl_input.remaining_months IS 'Remaining contractual term n.';
+COMMENT ON COLUMN v_ecl_input.horizon_months IS 'Months of loss counted: min(12, n) for Stage 1, n for Stage 2, 0 for Stage 3.';
+COMMENT ON COLUMN v_ecl_input.dpd IS 'Days past due.';
+COMMENT ON COLUMN v_ecl_input.restructured_flag IS 'Forbearance flag, used to choose the restructured floor.';
+COMMENT ON COLUMN v_ecl_input.months_in_stage3 IS 'Whole months since stage3_since (Stage 3 only).';
+COMMENT ON COLUMN v_ecl_input.lgd IS 'LGD for the grade from PARAM_LGD.';
+COMMENT ON COLUMN v_ecl_input.pd_12m_current IS 'Current 12-month PD from PD_SCORE.';
+COMMENT ON COLUMN v_ecl_input.dpd_multiplier IS 'PD multiplier of the loan''s DPD band (null in Stage 3).';
+COMMENT ON COLUMN v_ecl_input.pd_12m IS 'Measurement PD before scenarios: 1 in Stage 3, otherwise pd_12m_current x DPD multiplier capped at PD_CAP.';
+COMMENT ON COLUMN v_ecl_input.pd_cap IS 'PD_CAP from the parameters; scenario PDs are capped at it too.';
+COMMENT ON COLUMN v_ecl_input.floor_rate IS 'RBI floor rate for the loan''s stage, restructured status and time in Stage 3.';

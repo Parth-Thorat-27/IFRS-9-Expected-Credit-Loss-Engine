@@ -97,7 +97,8 @@
         <xs:element name="scenarios">
           <xs:complexType>
             <xs:sequence>
-              <xs:element name="scenario" maxOccurs="3">
+              <!-- Exactly the three scenarios ECL_RESULT stores a column for. -->
+              <xs:element name="scenario" minOccurs="3" maxOccurs="3">
                 <xs:complexType>
                   <xs:attribute name="code" type="scenarioCode" use="required"/>
                   <xs:attribute name="weight" type="unitDecimal" use="required"/>
