@@ -202,3 +202,19 @@ With these in place, the Phase 11 check "floor_applied is Y exactly where the fl
 - **CSV format:** SQL*Plus `SET MARKUP CSV ON QUOTE ON`, dates in ISO form through `NLS_DATE_FORMAT`. Numbers come out without a leading zero (`.0789`), which Power BI and pandas both read.
 - **The committed sample report leaves out `ecl_detail.csv`.** It is 13.8 MB of loan-level rows, and the spec keeps generated data out of git. `docs/sample_report/` has the HTML, the eight summary CSVs and a screenshot, because GitHub shows HTML files as source.
 - **`docs/powerbi_guide.md` hasn't been tried in Power BI.** Power BI Desktop isn't installed on the build machine, so the guide is written from the CSV layout and says so at the top.
+
+## D-025 · Phase 14 · Generated docs, the runbook's messages and the clean run
+
+- **`generate_data_dictionary.sh` reads `V_DATA_DICTIONARY`.** The view joins `USER_TAB_COLUMNS` and `USER_COL_COMMENTS`, plus `EXT_TABLE_DOC` for the external tables (D-011). SQL*Plus spools the rows to a temporary file in `logs/` instead of printing them. Three column descriptions quote Oracle error codes, and `run_sql` treats any `ORA-` line in its output as a failure. The script refuses to write the doc (exit 1) if any table, view or column has no description. A throwaway uncommented table showed it refusing and leaving the doc untouched.
+- **The README's Results section is generated.** `python/readme_results.py` writes it between two markers, from the database, the seeded-error manifests and `docs/performance.md`, in the same way `golden_example.py` fills the worked example in `methodology.md`. The README can then only show numbers the last run produced.
+- **The runbook quotes real messages.** The control-total and prerequisite errors come from `tests/test_dq.py`'s truncated file. Three were provoked for the runbook and put back straight away:
+  - a missing snapshot file on the external table;
+  - a revoked READ grant on `ECL_INCOMING_DIR`;
+  - the reject-share stop, with `DQ_MAX_REJECT_SHARE` lowered to 0.05% through `PKG_PARAMS` for one check, then the XML reloaded.
+- **The clean run** followed the README from the smoke test to `run_all_months.sh`, starting with `setup_db.sh --reset`. The 1.4 GB download was skipped, because the same file was already in `data/raw/`. It took 498 s: 89 s of set-up, then 409 s for the seven months. It reproduced the previous run exactly:
+  - every table the batch writes, per month (row counts and a hash of every column except run ids, timestamps and the model version);
+  - LGD by grade and the model's test metrics;
+  - the nine processed files and all fourteen monthly input files, byte for byte.
+
+  The only change is the model version, which is a training timestamp.
+- Empty `.gitkeep` placeholders were removed from folders that now hold files (`db/packages`, `db/seed`, `db/triggers`, `tests`). The git-ignored folders under `data/`, `reports/`, `logs/` and `models/` keep theirs, so a fresh clone has them.
