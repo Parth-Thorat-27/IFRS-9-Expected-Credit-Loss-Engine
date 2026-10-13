@@ -34,6 +34,8 @@ services:
       # The external table access driver writes its .log and .bad files here
       # (ECL_LOG_DIR), next to the batch logs and cleaned up with them.
       - ./logs:/opt/ecl/logs
+      # SQL*Plus SPOOLs the monthly CSV exports here (reports/YYYYMMDD/).
+      - ./reports:/opt/ecl/reports
     healthcheck:
       # healthcheck.sh ships with the gvenzl image; it passes once the database is open.
       test: ["CMD", "healthcheck.sh"]

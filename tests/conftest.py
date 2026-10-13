@@ -16,6 +16,10 @@ sys.path.insert(0, str(ROOT / "python"))
 from ecl.db import connect  # noqa: E402  (needs the path above)
 
 
+def pytest_configure(config):
+    config.addinivalue_line("markers", "slow: runs the real monthly batch (minutes); skip with -m 'not slow'")
+
+
 @pytest.fixture(scope="session")
 def conn():
     with connect() as connection:

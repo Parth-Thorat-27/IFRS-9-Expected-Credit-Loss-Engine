@@ -1,0 +1,16 @@
+# Monthly IFRS 9 batch: 06:00 on the 2nd of every month, for the previous
+# month-end. Install with `crontab -e` and change /path/to/ifrs9-ecl-engine.
+#
+#   minute hour day-of-month month day-of-week  command
+#
+# Notes:
+# - In a crontab line, % means "newline" unless escaped, so every % in the
+#   date command is written as \%.
+# - date -d "<first of this month> -1 day" is the last day of last month.
+# - On WSL, cron is not started automatically: run `sudo service cron start`.
+# - The demo data's dates are historical (2019), so cron is here to show the
+#   scheduling; scripts/run_all_months.sh is how the project is actually run.
+# - The batch takes a lock, so a run that overlaps a slow previous one exits
+#   at once instead of running twice.
+
+0 6 2 * * cd /path/to/ifrs9-ecl-engine && ./scripts/run_monthly_batch.sh "$(date -d "$(date +\%Y-\%m-01) -1 day" +\%F)" >> logs/cron.log 2>&1
